@@ -1,0 +1,103 @@
+ // Program name: Volumes every day
+// Developer's site: forexroboteasy.com
+// Development name: Forex Robot Easy Team
+
+// Include necessary libraries
+#include <Trade\Trade.mqh>
+#include <ChartObjects\ChartObjects.mqh>
+
+// Define input parameters
+input int RangePeriod = 10; // Range period for profile construction
+input int RangeCount = 5; // Number of range profiles
+input datetime StartTime = D'2022.01.01 00:00:00'; // Start time for profile construction
+input datetime EndTime = D'2022.01.31 23:59:59'; // End time for profile construction
+
+// Define variables
+double prevVolume = 0; // Previous volume
+double currentVolume = 0; // Current volume
+double rangeVolume = 0; // Volume within the specified range
+double totalVolume = 0; // Total volume within all ranges
+int currentRange = 0; // Current range count
+
+// Initialize trade functions
+CTrade trade;
+
+// Initialize chart objects
+CChartObjectLabel label;
+
+// Calculate volume every day
+void CalculateVolumeEveryDay()
+{
+   // Loop through each bar
+   for (int i = 0; i < Bars; i++)
+   {
+      // Check if current bar is within the specified time range
+      if (Time[i] >= StartTime && Time[i] <= EndTime)
+      {
+         // Calculate volume for the current bar
+         currentVolume += Volume[i];
+         
+         // Check if current bar is within the specified range period
+         if (Time[i] >= Time[i - RangePeriod] && Time[i] <= Time[i - 1])
+         {
+            // Calculate volume within the range period
+            rangeVolume += Volume[i];
+         }
+         
+         // Check if current range is completed
+         if (currentRange == RangeCount)
+         {
+            // Update total volume
+            totalVolume += rangeVolume;
+            
+            // Reset range volume and range count
+            rangeVolume = 0;
+            currentRange = 0;
+         }
+      }
+   }
+   
+   // Calculate average volume
+   double averageVolume = totalVolume / RangeCount;
+   
+   // Print average volume
+   Print('Average Volume: ', averageVolume);
+   
+   // Perform trading based on market trends
+   if (currentVolume > averageVolume)
+   {
+      // Execute buy trade
+      trade.Buy();
+      
+      // Display trading signal
+      label.Create(0, 'Buy Signal', 0, 0);
+   }
+   else if (currentVolume < averageVolume)
+   {
+      // Execute sell trade
+      trade.Sell();
+      
+      // Display trading signal
+      label.Create(0, 'Sell Signal', 0, 0);
+   }
+   
+   // Update previous volume with current volume
+   prevVolume = currentVolume;
+   
+   // Reset current volume
+   currentVolume = 0;
+   
+   // Increase current range count
+   currentRange++;
+}
+
+// Start program execution
+void OnStart()
+{
+   // Loop through each bar
+   for (int i = 0; i < Bars; i++)
+   {
+      // Calculate volume every day
+      CalculateVolumeEveryDay();
+   }
+}
